@@ -191,7 +191,7 @@ class FluxKontextImageToImage(_FluxImagesAPI):
             "required": {
                 "azure_endpoint": ("STRING", {
                     "multiline": False,
-                    "default": "https://<your-resource>.services.ai.azure.com/",
+                    "default": "",
                     "placeholder": "https://<your-resource>.services.ai.azure.com/"
                 }),
                 "api_version": ("STRING", {
@@ -253,7 +253,7 @@ class FluxKontextTextToImage(_FluxImagesAPI):
             "required": {
                 "azure_endpoint": ("STRING", {
                     "multiline": False,
-                    "default": "https://<your-resource>.services.ai.azure.com/",
+                    "default": "",
                     "placeholder": "https://<your-resource>.services.ai.azure.com/"
                 }),
                 "api_version": ("STRING", {
@@ -314,7 +314,7 @@ class Flux11ProTextToImage(_FluxImagesAPI):
             "required": {
                 "azure_endpoint": ("STRING", {
                     "multiline": False,
-                    "default": "https://<your-resource>.services.ai.azure.com/",
+                    "default": "",
                     "placeholder": "https://<your-resource>.services.ai.azure.com/"
                 }),
                 "api_version": ("STRING", {
