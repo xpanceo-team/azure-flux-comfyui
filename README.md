@@ -5,12 +5,13 @@ Minimal, production-focused ComfyUI nodes for Azure OpenAI Images (Flux). Provid
 - FLUX.1-Kontext-ImageToImage: edit existing image (edits API)
 - FLUX.1-Kontext-TextToImage: generate from text (generations API)
 - FLUX-1.1-pro-TextToImage: generate from text (generations API)
+- FLUX.2-pro-TextToImage: generate from text (generations API)
 
 All nodes call the official Azure OpenAI Images endpoints. No extra services, wrappers, or local models.
 
 ## Overview
 
-Three nodes with only the necessary fields for each mode. The API logic is unchanged and mirrors Azure’s Images Edits/Generations behavior.
+Four nodes with only the necessary fields for each mode. The API logic is unchanged and mirrors Azure’s Images Edits/Generations behavior.
 
 ## Installation
 
@@ -29,8 +30,8 @@ Restart ComfyUI after installation.
 
 Set these fields in the node UI:
 
-- azure_endpoint: `https://<your-resource>.services.ai.azure.com/`
-- api_version: `2025-04-01-preview`
+- azure_endpoint: `https://<your-resource>.services.ai.azure.com/` or `https://<your-resource>.cognitiveservices.azure.com/`
+- api_version: `2025-04-01-preview` (or `preview` for FLUX.2-pro if required)
 - api_key: your Azure OpenAI API key
 
 Notes:
@@ -38,6 +39,7 @@ Notes:
 - Ensure the deployment name exists in your Azure resource:
   - Kontext nodes use `FLUX.1-Kontext-pro`
   - FLUX-1.1 node uses `FLUX-1.1-pro`
+  - FLUX.2 node uses `FLUX.2-pro`
 
 ## Nodes
 
@@ -52,6 +54,11 @@ Notes:
   - Optional: size, n, output_format
 
 - FLUX-1.1-pro-TextToImage
+  - Mode: text-to-image (generations)
+  - Inputs: azure_endpoint, api_version, api_key, editing_prompt
+  - Optional: size, n, output_format
+
+- FLUX.2-pro-TextToImage
   - Mode: text-to-image (generations)
   - Inputs: azure_endpoint, api_version, api_key, editing_prompt
   - Optional: size, n, output_format
@@ -86,4 +93,3 @@ Notes:
 ## License
 
 MIT — see `LICENSE`.
-

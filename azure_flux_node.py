@@ -366,9 +366,71 @@ class Flux11ProTextToImage(_FluxImagesAPI):
         )
 
 
+class Flux2ProTextToImage(_FluxImagesAPI):
+    """FLUX.2-pro — Text-to-Image (generations)."""
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "azure_endpoint": ("STRING", {
+                    "multiline": False,
+                    "default": "",
+                    "placeholder": "https://<your-resource>.cognitiveservices.azure.com/"
+                }),
+                "api_version": ("STRING", {
+                    "multiline": False,
+                    "default": "preview",
+                    "placeholder": "Azure OpenAI API version"
+                }),
+                "api_key": ("STRING", {
+                    "multiline": False,
+                    "default": "",
+                    "placeholder": "Enter your Azure OpenAI API key"
+                }),
+                "editing_prompt": ("STRING", {
+                    "multiline": True,
+                    "default": "A photorealistic portrait of a person in a white t-shirt",
+                    "placeholder": "Describe the image you want"
+                }),
+            },
+            "optional": {
+                "size": ("STRING", {
+                    "multiline": False,
+                    "default": "1024x1024",
+                    "placeholder": "WIDTHxHEIGHT, e.g. 1024x1024"
+                }),
+                "n": ("INT", {"default": 1, "min": 1, "max": 8, "step": 1}),
+                "output_format": (["png", "jpeg", "webp"], {"default": "png"}),
+            }
+        }
+
+    RETURN_TYPES = ("IMAGE",)
+    RETURN_NAMES = ("images",)
+    FUNCTION = "run"
+    CATEGORY = "image/azure"
+    DESCRIPTION = "Azure OpenAI Images (FLUX.2-pro) — text-to-image (generations)"
+
+    def run(self, azure_endpoint, api_version, api_key, editing_prompt,
+            size="1024x1024", n=1, output_format="png"):
+        return self._run(
+            mode="generate",
+            azure_endpoint=azure_endpoint,
+            deployment="FLUX.2-pro",
+            api_version=api_version,
+            api_key=api_key,
+            editing_prompt=editing_prompt,
+            image_1=None,
+            size=size,
+            n=n,
+            output_format=output_format,
+        )
+
+
 # For repos that import node classes directly from this module
 __all__ = [
     "FluxKontextImageToImage",
     "FluxKontextTextToImage",
     "Flux11ProTextToImage",
+    "Flux2ProTextToImage",
 ]

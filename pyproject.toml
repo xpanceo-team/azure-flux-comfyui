@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "azure-flux-comfyui"
 description = "ComfyUI nodes for Azure OpenAI Images (Flux)"
-version = "0.1.0"
+version = "0.2.1"
 readme = "README.md"
 requires-python = ">=3.8"
 license = {file = "LICENSE"} 
