@@ -54,6 +54,42 @@ class _FluxImagesAPI:
         tensors = [self._pil_to_tensor(img) for img in images]
         return torch.cat(tensors, dim=0)
 
+    def _parse_images_response(self, resp):
+        if resp.status_code != 200:
+            txt = resp.text
+            try:
+                txt = json.dumps(resp.json(), ensure_ascii=False)
+            except Exception:
+                pass
+            raise ValueError(f"Azure Images API failed ({resp.status_code}): {txt}")
+
+        try:
+            payload = resp.json()
+        except Exception as e:
+            raise ValueError(f"Failed to parse Azure response JSON: {e}")
+
+        data_list = payload.get("data")
+        if not data_list or not isinstance(data_list, list):
+            raise ValueError(f"Unexpected Azure response structure: {json.dumps(payload)[:500]}")
+
+        out_images = []
+        for i, item in enumerate(data_list):
+            b64_img = item.get("b64_json")
+            if not b64_img:
+                raise ValueError(f"Missing 'b64_json' at index {i}.")
+            try:
+                img_bytes = base64.b64decode(b64_img)
+                img = Image.open(BytesIO(img_bytes))
+                if img.mode != "RGB":
+                    img = img.convert("RGB")
+                out_images.append(img)
+            except Exception as e:
+                raise ValueError(f"Failed to decode image {i}: {e}")
+
+        batched = self._pil_list_to_batched_tensor(out_images)
+        print(f"🎉 Success! Received {batched.shape[0]} image(s).")
+        return (batched,)
+
     def _run(self,
              mode: str,
              azure_endpoint: str,
@@ -144,42 +180,18 @@ class _FluxImagesAPI:
             except requests.RequestException as e:
                 raise ValueError(f"Network error calling Azure Images Generations: {e}")
 
-        if resp.status_code != 200:
-            txt = resp.text
+        if resp.status_code in (400, 404) and mode == "edit" and "1.1" in use_deployment:
             try:
-                txt = json.dumps(resp.json(), ensure_ascii=False)
+                payload = resp.json()
+                txt = json.dumps(payload, ensure_ascii=False)
             except Exception:
-                pass
-            if resp.status_code in (400, 404) and mode == "edit" and "1.1" in use_deployment:
-                txt += " — Note: This model/deployment may not support edits. Try mode='generate'."
-            raise ValueError(f"Azure Images API failed ({resp.status_code}): {txt}")
+                txt = resp.text
+            raise ValueError(
+                f"Azure Images API failed ({resp.status_code}): {txt} — "
+                "Note: This model/deployment may not support edits. Try mode='generate'."
+            )
 
-        try:
-            payload = resp.json()
-        except Exception as e:
-            raise ValueError(f"Failed to parse Azure response JSON: {e}")
-
-        data_list = payload.get("data")
-        if not data_list or not isinstance(data_list, list):
-            raise ValueError(f"Unexpected Azure response structure: {json.dumps(payload)[:500]}")
-
-        out_images = []
-        for i, item in enumerate(data_list):
-            b64_img = item.get("b64_json")
-            if not b64_img:
-                raise ValueError(f"Missing 'b64_json' at index {i}.")
-            try:
-                img_bytes = base64.b64decode(b64_img)
-                img = Image.open(BytesIO(img_bytes))
-                if img.mode != "RGB":
-                    img = img.convert("RGB")
-                out_images.append(img)
-            except Exception as e:
-                raise ValueError(f"Failed to decode image {i}: {e}")
-
-        batched = self._pil_list_to_batched_tensor(out_images)
-        print(f"🎉 Success! Received {batched.shape[0]} image(s).")
-        return (batched,)
+        return self._parse_images_response(resp)
 
 
 class FluxKontextImageToImage(_FluxImagesAPI):
@@ -203,6 +215,11 @@ class FluxKontextImageToImage(_FluxImagesAPI):
                     "multiline": False,
                     "default": "",
                     "placeholder": "Enter your Azure OpenAI API key"
+                }),
+                "deployment": ("STRING", {
+                    "multiline": False,
+                    "default": "FLUX.1-Kontext-pro",
+                    "placeholder": "Deployment name"
                 }),
                 "editing_prompt": ("STRING", {
                     "multiline": True,
@@ -228,12 +245,12 @@ class FluxKontextImageToImage(_FluxImagesAPI):
     CATEGORY = "image/azure"
     DESCRIPTION = "Azure OpenAI Images (Flux.1-Kontext) — image-to-image (edits)"
 
-    def run(self, azure_endpoint, api_version, api_key, editing_prompt, image_1,
+    def run(self, azure_endpoint, api_version, api_key, deployment, editing_prompt, image_1,
             size="1024x1024", n=1, output_format="png"):
         return self._run(
             mode="edit",
             azure_endpoint=azure_endpoint,
-            deployment="FLUX.1-Kontext-pro",
+            deployment=deployment,
             api_version=api_version,
             api_key=api_key,
             editing_prompt=editing_prompt,
@@ -266,6 +283,11 @@ class FluxKontextTextToImage(_FluxImagesAPI):
                     "default": "",
                     "placeholder": "Enter your Azure OpenAI API key"
                 }),
+                "deployment": ("STRING", {
+                    "multiline": False,
+                    "default": "FLUX.1-Kontext-pro",
+                    "placeholder": "Deployment name"
+                }),
                 "editing_prompt": ("STRING", {
                     "multiline": True,
                     "default": "A photorealistic portrait of a person in a white t-shirt",
@@ -289,12 +311,12 @@ class FluxKontextTextToImage(_FluxImagesAPI):
     CATEGORY = "image/azure"
     DESCRIPTION = "Azure OpenAI Images (Flux.1-Kontext) — text-to-image (generations)"
 
-    def run(self, azure_endpoint, api_version, api_key, editing_prompt,
+    def run(self, azure_endpoint, api_version, api_key, deployment, editing_prompt,
             size="1024x1024", n=1, output_format="png"):
         return self._run(
             mode="generate",
             azure_endpoint=azure_endpoint,
-            deployment="FLUX.1-Kontext-pro",
+            deployment=deployment,
             api_version=api_version,
             api_key=api_key,
             editing_prompt=editing_prompt,
@@ -327,6 +349,11 @@ class Flux11ProTextToImage(_FluxImagesAPI):
                     "default": "",
                     "placeholder": "Enter your Azure OpenAI API key"
                 }),
+                "deployment": ("STRING", {
+                    "multiline": False,
+                    "default": "FLUX-1.1-pro",
+                    "placeholder": "Deployment name"
+                }),
                 "editing_prompt": ("STRING", {
                     "multiline": True,
                     "default": "A photorealistic portrait of a person in a white t-shirt",
@@ -350,12 +377,12 @@ class Flux11ProTextToImage(_FluxImagesAPI):
     CATEGORY = "image/azure"
     DESCRIPTION = "Azure OpenAI Images (FLUX-1.1-pro) — text-to-image (generations)"
 
-    def run(self, azure_endpoint, api_version, api_key, editing_prompt,
+    def run(self, azure_endpoint, api_version, api_key, deployment, editing_prompt,
             size="1024x1024", n=1, output_format="png"):
         return self._run(
             mode="generate",
             azure_endpoint=azure_endpoint,
-            deployment="FLUX-1.1-pro",
+            deployment=deployment,
             api_version=api_version,
             api_key=api_key,
             editing_prompt=editing_prompt,
@@ -376,7 +403,7 @@ class Flux2ProTextToImage(_FluxImagesAPI):
                 "azure_endpoint": ("STRING", {
                     "multiline": False,
                     "default": "",
-                    "placeholder": "https://<your-resource>.cognitiveservices.azure.com/"
+                    "placeholder": "https://<your-resource>.services.ai.azure.com/"
                 }),
                 "api_version": ("STRING", {
                     "multiline": False,
@@ -413,18 +440,46 @@ class Flux2ProTextToImage(_FluxImagesAPI):
 
     def run(self, azure_endpoint, api_version, api_key, editing_prompt,
             size="1024x1024", n=1, output_format="png"):
-        return self._run(
-            mode="generate",
-            azure_endpoint=azure_endpoint,
-            deployment="FLUX.2-pro",
-            api_version=api_version,
-            api_key=api_key,
-            editing_prompt=editing_prompt,
-            image_1=None,
-            size=size,
-            n=n,
-            output_format=output_format,
-        )
+        if not api_key or not api_key.strip():
+            raise ValueError("Please enter your Azure OpenAI API key.")
+        if not editing_prompt or not editing_prompt.strip():
+            raise ValueError("Please provide a non-empty prompt.")
+        if not isinstance(n, int) or n < 1:
+            n = 1
+
+        size_str = (size or "").strip().lower()
+        if not re.match(r"^\d{2,5}x\d{2,5}$", size_str):
+            raise ValueError("Parameter 'size' must be 'WIDTHxHEIGHT', e.g. '1024x1024'.")
+
+        endpoint = self._normalize_endpoint(azure_endpoint)
+        generations_url = f"{endpoint}providers/blackforestlabs/v1/flux-2-pro?api-version={api_version}"
+        print(f"🚀 [Azure Images: FLUX.2-pro GENERATE] {generations_url}")
+        print(f"📝 Prompt: {editing_prompt}")
+        print(f"🧰 n={n}, size={size_str}, output_format={output_format}")
+
+        payload = {
+            "prompt": editing_prompt,
+            "n": n,
+            "size": size_str,
+            "output_format": output_format,
+        }
+
+        headers = {
+            "Api-Key": api_key.strip(),
+            "Content-Type": "application/json",
+        }
+
+        try:
+            resp = requests.post(
+                generations_url,
+                headers=headers,
+                json=payload,
+                timeout=180,
+            )
+        except requests.RequestException as e:
+            raise ValueError(f"Network error calling Azure Flux.2-pro Generations: {e}")
+
+        return self._parse_images_response(resp)
 
 
 # For repos that import node classes directly from this module
