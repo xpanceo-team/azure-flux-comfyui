@@ -415,6 +415,11 @@ class Flux2ProTextToImage(_FluxImagesAPI):
                     "default": "",
                     "placeholder": "Enter your Azure OpenAI API key"
                 }),
+                "deployment": ("STRING", {
+                    "multiline": False,
+                    "default": "FLUX.2-pro",
+                    "placeholder": "Deployment name"
+                }),
                 "editing_prompt": ("STRING", {
                     "multiline": True,
                     "default": "A photorealistic portrait of a person in a white t-shirt",
@@ -438,7 +443,7 @@ class Flux2ProTextToImage(_FluxImagesAPI):
     CATEGORY = "image/azure"
     DESCRIPTION = "Azure OpenAI Images (FLUX.2-pro) — text-to-image (generations)"
 
-    def run(self, azure_endpoint, api_version, api_key, editing_prompt,
+    def run(self, azure_endpoint, api_version, api_key, deployment, editing_prompt,
             size="1024x1024", n=1, output_format="png"):
         if not api_key or not api_key.strip():
             raise ValueError("Please enter your Azure OpenAI API key.")
@@ -458,6 +463,7 @@ class Flux2ProTextToImage(_FluxImagesAPI):
         print(f"🧰 n={n}, size={size_str}, output_format={output_format}")
 
         payload = {
+            "model": deployment,
             "prompt": editing_prompt,
             "n": n,
             "size": size_str,
